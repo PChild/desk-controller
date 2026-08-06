@@ -150,7 +150,7 @@ class WifiManager:
         self.server = Server(
             self.pool,
             "/",
-            debug=True
+            debug=False
         )
 
 
