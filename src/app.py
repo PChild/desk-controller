@@ -26,6 +26,8 @@ class DeskApplication:
     def __init__(self):
 
         self.started=time.monotonic()
+        
+        self.last_successful_loop = time.monotonic()
 
         self.led=StatusLED()
 
@@ -53,7 +55,7 @@ class DeskApplication:
 
             self.network.connect()
 
-            self.led.connected()
+            self.led.startup_ok()
 
 
         except Exception as e:
@@ -125,6 +127,16 @@ class DeskApplication:
         data["uptime"] = int(
             time.monotonic() - self.started
         )
+        
+        data["last_successful_loop"] = int(
+            time.monotonic()
+            -
+            self.last_successful_loop
+        )
+
+        data["loop_timestamp"] = (
+            self.last_successful_loop
+        )
 
         data["free_memory"] = gc.mem_free()
 
@@ -150,19 +162,16 @@ class DeskApplication:
 
                 self.network.poll()
 
+                self.led.poll()
 
-                if wifi.radio.connected:
 
-                    self.led.connected()
-
-                else:
-
-                    self.led.wifi_retry()
-
+                # If we got here, the main loop succeeded
+                self.last_successful_loop = (
+                    time.monotonic()
+                )
 
 
             except Exception as e:
-
 
                 print(
                     "Fatal loop error:",
@@ -191,7 +200,6 @@ class DeskApplication:
             time.sleep(
                 0.01
             )
-
 
 
 
