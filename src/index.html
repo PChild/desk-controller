@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>Desk Controller</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-top: 30px;
+}
+
+
+button {
+
+    width: 250px;
+    height: 80px;
+    font-size: 28px;
+    margin: 10px;
+
+}
+
+
+#status {
+
+    margin: 20px;
+    font-size: 18px;
+
+}
+
+
+.card {
+
+    display: inline-block;
+    text-align: left;
+    padding: 20px;
+    margin: 10px;
+
+}
+
+
+</style>
+
+
+
+<script>
+
+
+function pressCommand(command)
+{
+
+    fetch("/api/" + command)
+
+    .then(response => response.json())
+
+    .then(data =>
+    {
+
+        document.getElementById(
+            "message"
+        ).innerHTML =
+            data.message;
+
+
+        updateStatus();
+
+    })
+
+    .catch(error =>
+    {
+
+        document.getElementById(
+            "message"
+        ).innerHTML =
+            "Connection error";
+
+    });
+
+}
+
+
+
+
+function updateStatus()
+{
+
+    fetch("/api/status")
+
+    .then(response => response.json())
+
+    .then(data =>
+    {
+
+
+        document.getElementById(
+            "last"
+        ).innerHTML =
+            "Last command: "
+            +
+            data.last_command;
+
+
+
+        document.getElementById(
+            "lock"
+        ).innerHTML =
+            "Lockout: "
+            +
+            data.lockout_seconds
+            +
+            " seconds";
+
+
+
+        document.getElementById(
+            "uptime"
+        ).innerHTML =
+            "Uptime: "
+            +
+            data.uptime
+            +
+            " seconds";
+
+
+
+        document.getElementById(
+            "memory"
+        ).innerHTML =
+            "Free memory: "
+            +
+            data.free_memory;
+
+
+
+        document.getElementById(
+            "wifi"
+        ).innerHTML =
+            "WiFi: "
+            +
+            data.wifi;
+
+
+
+        document.getElementById(
+            "ip"
+        ).innerHTML =
+            "IP: "
+            +
+            data.ip;
+
+
+
+        document.getElementById(
+            "hostname"
+        ).innerHTML =
+            "Hostname: "
+            +
+            data.hostname;
+
+
+    })
+
+    .catch(error =>
+    {
+
+        document.getElementById(
+            "wifi"
+        ).innerHTML =
+            "WiFi status unavailable";
+
+    });
+
+}
+
+
+
+setInterval(
+    updateStatus,
+    2000
+);
+
+
+
+window.onload =
+    updateStatus;
+
+
+</script>
+
+
+</head>
+
+
+<body>
+
+
+<h1>Desk Controller</h1>
+
+
+
+<button onclick="pressCommand('stand')">
+Stand
+</button>
+
+
+<br>
+
+
+<button onclick="pressCommand('stow')">
+Stow
+</button>
+
+
+<br>
+
+
+<button onclick="pressCommand('sit')">
+Sit
+</button>
+
+
+
+<div id="message">
+Ready
+</div>
+
+
+
+<div id="status">
+
+
+<div class="card">
+
+<div id="last">
+Loading...
+</div>
+
+
+<div id="lock">
+Loading...
+</div>
+
+
+<div id="uptime">
+Loading...
+</div>
+
+
+<div id="memory">
+Loading...
+</div>
+
+
+<div id="wifi">
+Loading...
+</div>
+
+
+<div id="ip">
+Loading...
+</div>
+
+
+<div id="hostname">
+Loading...
+</div>
+
+</div>
+
+
+</div>
+
+
+</body>
+
+</html>
