@@ -7,17 +7,18 @@ import wifi
 
 try:
     from watchdog import WatchDogMode
-    WATCHDOG_AVAILABLE=True
+
+    WATCHDOG_AVAILABLE = True
 
 except ImportError:
 
-    WATCHDOG_AVAILABLE=False
+    WATCHDOG_AVAILABLE = False
 
 
+from button import CenterButton
 from desk import DeskController
-from wifi_manager import WifiManager
 from status_led import StatusLED
-
+from wifi_manager import WifiManager
 
 
 class DeskApplication:
@@ -25,25 +26,30 @@ class DeskApplication:
 
     def __init__(self):
 
-        self.started=time.monotonic()
-        
-        self.last_successful_loop = time.monotonic()
+        self.started = time.monotonic()
 
-        self.led=StatusLED()
+        self.last_successful_loop = (
+            self.started
+        )
+
+
+        self.led = StatusLED()
+
+        self.button = CenterButton()
 
         self.led.booting()
 
 
-        self.desk=DeskController()
+        self.desk = DeskController()
 
 
         # Critical:
-        # Never leave outputs active after boot
+        # Never leave outputs active after boot.
 
         self.desk.release()
 
 
-        self.network=WifiManager(
+        self.network = WifiManager(
             self
         )
 
@@ -78,9 +84,9 @@ class DeskApplication:
 
         try:
 
-            microcontroller.watchdog.timeout=30
+            microcontroller.watchdog.timeout = 30
 
-            microcontroller.watchdog.mode=(
+            microcontroller.watchdog.mode = (
                 WatchDogMode.RESET
             )
 
@@ -99,7 +105,6 @@ class DeskApplication:
 
 
 
-
     def feed_watchdog(self):
 
         if WATCHDOG_AVAILABLE:
@@ -114,42 +119,96 @@ class DeskApplication:
 
 
 
+    def is_healthy(self):
+
+        return (
+            time.monotonic()
+            -
+            self.last_successful_loop
+            <
+            5
+        )
+
+
 
     def status(self):
 
         data = self.desk.status()
 
+        now = time.monotonic()
+
+
         try:
-            ip = str(wifi.radio.ipv4_address)
+
+            ip = str(
+                wifi.radio.ipv4_address
+            )
+
         except Exception:
+
             ip = None
 
+
         data["uptime"] = int(
-            time.monotonic() - self.started
+            now
+            -
+            self.started
         )
-        
+
+
+        data["free_memory"] = (
+            gc.mem_free()
+        )
+
+
+        data["wifi"] = (
+            wifi.radio.connected
+        )
+
+
+        data["ip"] = ip
+
+
+        data["hostname"] = (
+            self.network.hostname
+            +
+            ".local"
+        )
+
+
+        data["healthy"] = (
+            self.is_healthy()
+        )
+
+
         data["last_successful_loop"] = int(
-            time.monotonic()
+            self.last_successful_loop
+            -
+            self.started
+        )
+
+
+        data["loop_age"] = (
+            now
             -
             self.last_successful_loop
         )
 
-        data["loop_timestamp"] = (
-            self.last_successful_loop
-        )
-
-        data["free_memory"] = gc.mem_free()
-
-        data["wifi"] = wifi.radio.connected
-
-        data["ip"] = ip
-
-        data["hostname"] = (
-            self.network.hostname
-            + ".local"
-        )
 
         return data
+
+
+
+    def poll_button(self):
+
+        if self.button.pressed():
+
+            self.led.show_status(
+                self.is_healthy(),
+                wifi.radio.connected
+            )
+
+
 
     def run(self):
 
@@ -160,12 +219,19 @@ class DeskApplication:
 
             try:
 
+                self.poll_button()
+
+
                 self.network.poll()
+
 
                 self.led.poll()
 
 
-                # If we got here, the main loop succeeded
+                # If we reached this point,
+                # the main application loop
+                # completed successfully.
+
                 self.last_successful_loop = (
                     time.monotonic()
                 )
@@ -179,9 +245,6 @@ class DeskApplication:
                 )
 
 
-                self.led.error()
-
-
                 try:
 
                     self.desk.release()
@@ -191,11 +254,17 @@ class DeskApplication:
                     pass
 
 
+                self.led.error()
+
+
+                # Allow the application to continue
+                # while the watchdog remains active.
+
                 time.sleep(2)
 
 
-
             gc.collect()
+
 
             time.sleep(
                 0.01
@@ -203,9 +272,8 @@ class DeskApplication:
 
 
 
-
 def run():
 
-    app=DeskApplication()
+    app = DeskApplication()
 
     app.run()

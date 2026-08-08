@@ -8,12 +8,11 @@ import mdns
 from adafruit_httpserver import (
     Server,
     Response,
-    JSONResponse
+    JSONResponse,
 )
 
 
 class WifiManager:
-
 
     def __init__(self, app):
 
@@ -25,12 +24,10 @@ class WifiManager:
         )
 
         self.server = None
-        self.mdns = None
-
         self.pool = None
+        self.mdns_server = None
 
         self.last_check = 0
-
 
 
     def connect(self):
@@ -40,7 +37,6 @@ class WifiManager:
         self.start_mdns()
 
         self.start_server()
-
 
 
     def connect_wifi(self):
@@ -75,11 +71,7 @@ class WifiManager:
 
 
                 print(
-                    "Connected"
-                )
-
-                print(
-                    "IP:",
+                    "Connected:",
                     wifi.radio.ipv4_address
                 )
 
@@ -94,40 +86,27 @@ class WifiManager:
                     e
                 )
 
-                if self.app.led:
-
-                    self.app.led.wifi_retry()
-
-
                 time.sleep(5)
-
-
 
 
     def start_mdns(self):
 
         try:
 
-            self.mdns = mdns.Server(
+            self.mdns_server = mdns.Server(
                 wifi.radio
             )
 
-
-            self.mdns.hostname = (
+            self.mdns_server.hostname = (
                 self.hostname
-            )
-
-
-            self.mdns.advertise_service(
-                "_http",
-                "_tcp",
-                80
             )
 
 
             print(
                 "mDNS:",
-                self.hostname + ".local"
+                self.hostname
+                +
+                ".local"
             )
 
 
@@ -139,7 +118,6 @@ class WifiManager:
             )
 
 
-
     def start_server(self):
 
         self.pool = socketpool.SocketPool(
@@ -147,10 +125,20 @@ class WifiManager:
         )
 
 
+        http_debug = (
+            os.getenv(
+                "HTTP_DEBUG",
+                "false"
+            ).lower()
+            ==
+            "true"
+        )
+
+
         self.server = Server(
             self.pool,
             "/",
-            debug=False
+            debug=http_debug
         )
 
 
@@ -170,9 +158,7 @@ class WifiManager:
         )
 
 
-
     def routes(self):
-
 
         @self.server.route("/")
         def home(request):
@@ -189,7 +175,6 @@ class WifiManager:
                 )
 
 
-
         @self.server.route(
             "/api/status"
         )
@@ -199,7 +184,6 @@ class WifiManager:
                 request,
                 self.app.status()
             )
-
 
 
         @self.server.route(
@@ -213,7 +197,6 @@ class WifiManager:
             )
 
 
-
         @self.server.route(
             "/api/stow"
         )
@@ -223,7 +206,6 @@ class WifiManager:
                 request,
                 "stow"
             )
-
 
 
         @self.server.route(
@@ -237,14 +219,13 @@ class WifiManager:
             )
 
 
-
     def command(
         self,
         request,
         command
     ):
 
-        ok,msg = self.app.desk.press(
+        ok, msg = self.app.desk.press(
             command
         )
 
@@ -258,7 +239,6 @@ class WifiManager:
         )
 
 
-
     def reconnect(self):
 
         print(
@@ -268,10 +248,9 @@ class WifiManager:
 
         try:
 
-            if self.server:
+            if self.server is not None:
 
                 self.server.stop()
-
 
         except Exception:
 
@@ -279,15 +258,20 @@ class WifiManager:
 
 
         self.server = None
+        self.pool = None
+        self.mdns_server = None
+
+
+        try:
+
+            wifi.radio.stop_station()
+
+        except Exception:
+
+            pass
 
 
         self.connect()
-
-
-        if self.app.led:
-
-            self.app.led.connected()
-
 
 
     def poll(self):
@@ -295,7 +279,13 @@ class WifiManager:
         now = time.monotonic()
 
 
-        if now - self.last_check > 10:
+        if (
+            now
+            -
+            self.last_check
+            >
+            10
+        ):
 
             self.last_check = now
 
@@ -305,7 +295,6 @@ class WifiManager:
                 self.reconnect()
 
 
-
-        if self.server:
+        if self.server is not None:
 
             self.server.poll()

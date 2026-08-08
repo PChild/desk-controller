@@ -7,16 +7,21 @@ import neopixel
 
 class StatusLED:
 
-
     def __init__(self):
 
-        self.startup_display_time = int(
+        self.startup_seconds = int(
             os.getenv(
                 "LED_STARTUP_SECONDS",
-                "120"
+                "30"
             )
         )
 
+        self.status_seconds = int(
+            os.getenv(
+                "LED_STATUS_SECONDS",
+                "10"
+            )
+        )
 
         self.pixel = neopixel.NeoPixel(
             board.NEOPIXEL,
@@ -25,12 +30,9 @@ class StatusLED:
             auto_write=True
         )
 
-
-        self.start_time = None
-
+        self.display_until = None
 
         self.off()
-
 
 
     def booting(self):
@@ -42,7 +44,6 @@ class StatusLED:
         )
 
 
-
     def startup_ok(self):
 
         self.pixel[0] = (
@@ -51,50 +52,69 @@ class StatusLED:
             0
         )
 
-        self.start_time = time.monotonic()
+        self.display_until = (
+            time.monotonic()
+            +
+            self.startup_seconds
+        )
 
+
+    def show_status(self, healthy, wifi_connected):
+
+        if healthy and wifi_connected:
+
+            self.pixel[0] = (
+                0,
+                255,
+                0
+            )
+
+        elif not wifi_connected:
+
+            self.pixel[0] = (
+                255,
+                150,
+                0
+            )
+
+        else:
+
+            self.pixel[0] = (
+                255,
+                0,
+                0
+            )
+
+        self.display_until = (
+            time.monotonic()
+            +
+            self.status_seconds
+        )
 
 
     def poll(self):
 
-        if self.start_time is None:
+        if self.display_until is None:
 
             return
 
-
-        elapsed = (
-            time.monotonic()
-            -
-            self.start_time
-        )
-
-
-        if elapsed >= self.startup_display_time:
+        if time.monotonic() >= self.display_until:
 
             self.off()
 
-            self.start_time = None
-
+            self.display_until = None
 
 
     def wifi_retry(self):
 
-        self.pixel[0] = (
-            255,
-            100,
-            0
-        )
-
+        # Don't leave this permanently illuminated.
+        pass
 
 
     def connected(self):
 
-        self.pixel[0] = (
-            0,
-            255,
-            0
-        )
-
+        # Used only for compatibility with existing code.
+        pass
 
 
     def error(self):
@@ -105,6 +125,11 @@ class StatusLED:
             0
         )
 
+        self.display_until = (
+            time.monotonic()
+            +
+            self.status_seconds
+        )
 
 
     def off(self):
