@@ -1,6 +1,6 @@
 # Desk Controller
 
-CircuitPython project running on an [M5Stack AtomS3 Lite](https://circuitpython.org/board/m5stack_atoms3_lite/) for a TOPSKY standing desk using the [DewertOkin DH01.02](https://www.dewertokin.com/products/office/handsets/dh01/dh0102/) with three programmable memory positions.
+CircuitPython project running on an [M5Stack AtomS3 Lite](https://circuitpython.org/board/m5stack_atoms3_lite/) for a TOPSKY standing desk using the [DewertOkin DH01.02](https://www.dewertokin.com/products/office/handsets/dh01/dh0102/) controller with three programmable memory positions.
 
 The original desk handset remains connected and fully usable. The AtomS3 Lite provides an additional network interface for controlling the three saved positions.
 
@@ -42,7 +42,6 @@ desk-controller/
 │
 ├── tools/
 │   └── deploy.py          # Deploy to CIRCUITPY
-├── stubs/                  # Pylance-only shims
 ├── settings.toml.example
 ├── requirements.txt
 └── README.md
