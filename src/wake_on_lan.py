@@ -99,19 +99,20 @@ class WakeOnLan:
                 pool.SOCK_DGRAM
             )
 
-            sock.setsockopt(
-                pool.SOL_SOCKET,
-                pool.SO_BROADCAST,
-                1
-            )
-
-            sock.sendto(
+            bytes_sent = sock.sendto(
                 packet,
                 (
                     self.broadcast_address,
                     self.port
                 )
             )
+
+
+            if bytes_sent != len(packet):
+
+                raise OSError(
+                    "Incomplete Wake-on-LAN packet"
+                )
 
             self.last_result = "sent"
 
