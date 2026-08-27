@@ -219,6 +219,25 @@ class WifiManager:
             )
 
 
+        @self.server.route(
+            "/api/wake"
+        )
+        def wake(request):
+
+            ok, message = self.app.wake_on_lan.send(
+                self.pool
+            )
+
+
+            return JSONResponse(
+                request,
+                {
+                    "success": ok,
+                    "message": message
+                }
+            )
+
+
     def command(
         self,
         request,

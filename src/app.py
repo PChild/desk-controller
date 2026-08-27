@@ -18,6 +18,7 @@ except ImportError:
 from button import CenterButton
 from desk import DeskController
 from status_led import StatusLED
+from wake_on_lan import WakeOnLan
 from wifi_manager import WifiManager
 
 
@@ -41,6 +42,8 @@ class DeskApplication:
 
 
         self.desk = DeskController()
+
+        self.wake_on_lan = WakeOnLan()
 
 
         # Critical:
@@ -195,6 +198,16 @@ class DeskApplication:
         )
 
 
+        data["wake_on_lan_configured"] = (
+            self.wake_on_lan.configured()
+        )
+
+
+        data["wake_on_lan_last_result"] = (
+            self.wake_on_lan.last_result
+        )
+
+
         return data
 
 
@@ -203,10 +216,21 @@ class DeskApplication:
 
         if self.button.pressed():
 
-            self.led.show_status(
-                self.is_healthy(),
-                wifi.radio.connected
+            ok, _ = self.wake_on_lan.send(
+                self.network.pool
             )
+
+
+            if ok:
+
+                self.led.show_status(
+                    True,
+                    True
+                )
+
+            else:
+
+                self.led.error()
 
 
 

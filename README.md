@@ -36,6 +36,7 @@ desk-controller/
 │   ├── desk.py            # Desk hardware interface
 │   ├── button.py          # AtomS3 Lite button
 │   ├── status_led.py      # RGB status LED
+│   ├── wake_on_lan.py     # Wake-on-LAN magic packet sender
 │   ├── wifi_manager.py    # Wi-Fi, mDNS and HTTP server
 │   ├── index.html          # Web interface
 │   └── lib/               # CircuitPython libraries
@@ -62,6 +63,7 @@ GET /api/status
 GET /api/stand
 GET /api/stow
 GET /api/sit
+GET /api/wake
 ```
 
 ## Reliability
@@ -77,6 +79,24 @@ The controller:
 * Uses the LED to indicate startup and controller status.
 
 The original desk handset continues to work if the ESP32 is powered off or disconnected.
+
+## Center button Wake-on-LAN
+
+Pressing the AtomS3 Lite center button or selecting **Wake PC** in the web
+interface sends a Wake-on-LAN magic packet. Set the target computer's MAC
+address in `src/settings.toml`:
+
+```toml
+WOL_MAC_ADDRESS="AA:BB:CC:DD:EE:FF"
+WOL_BROADCAST_ADDRESS="255.255.255.255"
+WOL_PORT=9
+```
+
+The broadcast address and port are optional; the defaults shown above work on
+many local networks. If the global broadcast is blocked by your router, use the
+subnet broadcast address instead (for example, `192.168.1.255`). Wake-on-LAN
+must also be enabled in the target computer's firmware and network-adapter
+settings.
 
 ## Deploying code
 
