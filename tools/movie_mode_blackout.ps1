@@ -23,5 +23,22 @@ $form.StartPosition = [Windows.Forms.FormStartPosition]::Manual
 $form.Bounds = $screen.Bounds
 $form.TopMost = $true
 $form.ShowInTaskbar = $false
+$form.Cursor = [Windows.Forms.Cursors]::Hand
+
+$form.Add_Click({
+    try {
+        $client = [Net.WebClient]::new()
+        [void]$client.DownloadString(
+            "http://desk.local/api/movie/off"
+        )
+    }
+    finally {
+        if ($null -ne $client) {
+            $client.Dispose()
+        }
+
+        $form.Close()
+    }
+})
 
 [Windows.Forms.Application]::Run($form)

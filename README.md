@@ -108,7 +108,8 @@ The **Movie Mode** web button covers two configured Windows displays with
 borderless, always-on-top black windows. The ESP32 sends a token-protected UDP
 command to a Windows helper. Windows keeps both displays attached, so windows
 and icons do not move to the remaining display. Exiting movie mode closes both
-blackouts immediately.
+blackouts immediately. Clicking either blacked-out display also exits movie
+mode and closes both overlays.
 
 1. Copy `tools/movie_mode_agent_config.psd1.example` to
    `tools/movie_mode_agent_config.psd1` and set the two Windows display names,
