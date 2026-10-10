@@ -265,9 +265,7 @@ try {
                             "-AgentPort",
                             $listenPort,
                             "-Token",
-                            $token,
-                            "-ControllerOffUrl",
-                            $controllerOffUrl
+                            $token
                         ) `
                         -WindowStyle Hidden `
                         -PassThru
@@ -282,6 +280,25 @@ try {
             "on" {
                 Stop-Blackouts
                 Restore-MonitorBrightness
+
+                # A loopback command came from an overlay click rather than
+                # the ESP32. Synchronize the controller's toggle state. The
+                # resulting UDP "on" command comes from the ESP32 address, so
+                # it does not cause another callback.
+                if ([Net.IPAddress]::IsLoopback($remote.Address)) {
+                    try {
+                        Invoke-WebRequest `
+                            -Uri $controllerOffUrl `
+                            -UseBasicParsing `
+                            -TimeoutSec 3 | Out-Null
+                    }
+                    catch {
+                        Write-Warning (
+                            "Could not synchronize ESP32 movie-mode state: " +
+                            $_.Exception.Message
+                        )
+                    }
+                }
 
                 Write-Host "Movie mode off: blackouts closed"
             }
