@@ -37,3 +37,4 @@ desktop.ini
 
 # Local secrets
 src/settings.toml
+tools/movie_mode_agent_config.psd1

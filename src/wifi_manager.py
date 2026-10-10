@@ -238,6 +238,39 @@ class WifiManager:
             )
 
 
+        @self.server.route(
+            "/api/movie"
+        )
+        def movie(request):
+
+            return self.movie_mode(
+                request,
+                None
+            )
+
+
+        @self.server.route(
+            "/api/movie/on"
+        )
+        def movie_on(request):
+
+            return self.movie_mode(
+                request,
+                True
+            )
+
+
+        @self.server.route(
+            "/api/movie/off"
+        )
+        def movie_off(request):
+
+            return self.movie_mode(
+                request,
+                False
+            )
+
+
     def command(
         self,
         request,
@@ -254,6 +287,42 @@ class WifiManager:
             {
                 "success": ok,
                 "message": msg
+            }
+        )
+
+
+    def movie_mode(
+        self,
+        request,
+        enabled
+    ):
+
+        if enabled is None:
+
+            ok, message = (
+                self.app.movie_mode.toggle(
+                    self.pool
+                )
+            )
+
+        else:
+
+            ok, message = (
+                self.app.movie_mode.set_enabled(
+                    self.pool,
+                    enabled
+                )
+            )
+
+
+        return JSONResponse(
+            request,
+            {
+                "success": ok,
+                "message": message,
+                "movie_mode_enabled": (
+                    self.app.movie_mode.enabled
+                )
             }
         )
 

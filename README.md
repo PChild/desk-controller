@@ -35,6 +35,7 @@ desk-controller/
 │   ├── app.py             # Application/main loop
 │   ├── desk.py            # Desk hardware interface
 │   ├── button.py          # AtomS3 Lite button
+│   ├── movie_mode.py      # Windows movie-mode command sender
 │   ├── status_led.py      # RGB status LED
 │   ├── wake_on_lan.py     # Wake-on-LAN magic packet sender
 │   ├── wifi_manager.py    # Wi-Fi, mDNS and HTTP server
@@ -64,6 +65,9 @@ GET /api/stand
 GET /api/stow
 GET /api/sit
 GET /api/wake
+GET /api/movie
+GET /api/movie/on
+GET /api/movie/off
 ```
 
 ## Reliability
@@ -97,6 +101,47 @@ many local networks. If the global broadcast is blocked by your router, use the
 subnet broadcast address instead (for example, `192.168.1.255`). Wake-on-LAN
 must also be enabled in the target computer's firmware and network-adapter
 settings.
+
+## Movie mode
+
+The **Movie Mode** web button toggles two configured Windows monitors between
+standby and on. The ESP32 sends a small authenticated UDP command to a Windows
+helper, which uses MultiMonitorTool's DDC/CI `/TurnOff` and `/TurnOn` commands.
+The monitors remain part of the Windows desktop, so window positions are not
+rearranged.
+
+1. Download [MultiMonitorTool](https://www.nirsoft.net/utils/multi_monitor_tool.html)
+   on the Windows computer.
+2. Open it and note the serial number or monitor ID for each of the two monitors.
+3. Copy `tools/movie_mode_agent_config.psd1.example` to
+   `tools/movie_mode_agent_config.psd1` and set the tool path, two monitor IDs,
+   UDP port, and a private token.
+4. Add the matching computer address, port, and token to `src/settings.toml`:
+
+```toml
+MOVIE_MODE_HOST="192.168.1.151"
+MOVIE_MODE_PORT=8765
+MOVIE_MODE_TOKEN="use-the-same-private-token-here"
+```
+
+5. Allow inbound UDP port 8765 through Windows Firewall on the private network,
+   then start the helper while signed in:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\movie_mode_agent.ps1
+```
+
+For reliable recovery, a Stream Deck button can call either explicit endpoint:
+
+```text
+http://desk.local/api/movie/on   # enter movie mode; monitors go to standby
+http://desk.local/api/movie/off  # leave movie mode; monitors turn on
+```
+
+The regular `/api/movie` endpoint toggles the current controller state. The
+controller's state resets to off after an ESP32 reboot, so use the explicit
+`/api/movie/off` endpoint whenever the displayed state is uncertain. The web
+button changes state only after the Windows helper acknowledges the command.
 
 ## Deploying code
 

@@ -17,6 +17,7 @@ except ImportError:
 
 from button import CenterButton
 from desk import DeskController
+from movie_mode import MovieMode
 from status_led import StatusLED
 from wake_on_lan import WakeOnLan
 from wifi_manager import WifiManager
@@ -44,6 +45,8 @@ class DeskApplication:
         self.desk = DeskController()
 
         self.wake_on_lan = WakeOnLan()
+
+        self.movie_mode = MovieMode()
 
 
         # Critical:
@@ -205,6 +208,21 @@ class DeskApplication:
 
         data["wake_on_lan_last_result"] = (
             self.wake_on_lan.last_result
+        )
+
+
+        data["movie_mode_configured"] = (
+            self.movie_mode.configured()
+        )
+
+
+        data["movie_mode_enabled"] = (
+            self.movie_mode.enabled
+        )
+
+
+        data["movie_mode_last_result"] = (
+            self.movie_mode.last_result
         )
 
 

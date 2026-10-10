@@ -1,0 +1,15 @@
+@{
+    # Download MultiMonitorTool and update this path.
+    MultiMonitorToolPath = "C:\Tools\MultiMonitorTool\MultiMonitorTool.exe"
+
+    # Use monitor serial numbers or IDs shown by MultiMonitorTool.
+    MonitorIds = @(
+        "FIRST_MONITOR_SERIAL_OR_ID"
+        "SECOND_MONITOR_SERIAL_OR_ID"
+    )
+
+    ListenPort = 8765
+
+    # Use the same private value for MOVIE_MODE_TOKEN in settings.toml.
+    Token = "replace-with-a-long-random-value"
+}

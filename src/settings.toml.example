@@ -9,3 +9,8 @@ HTTP_DEBUG=false
 WOL_MAC_ADDRESS="AA:BB:CC:DD:EE:FF"
 WOL_BROADCAST_ADDRESS="255.255.255.255"
 WOL_PORT=9
+
+# Windows computer running tools/movie_mode_agent.ps1.
+MOVIE_MODE_HOST="192.168.1.151"
+MOVIE_MODE_PORT=8765
+MOVIE_MODE_TOKEN="replace-with-a-long-random-value"
