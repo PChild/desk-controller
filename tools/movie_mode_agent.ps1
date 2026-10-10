@@ -24,6 +24,9 @@ else {
 $brightnessStateFile = Join-Path `
     ([IO.Path]::GetTempPath()) `
     "desk_controller_movie_brightness.json"
+$pidFile = Join-Path `
+    ([IO.Path]::GetTempPath()) `
+    "desk_controller_movie_mode.pid"
 $controllerOffUrl = if ($config.ControllerOffUrl) {
     [string]$config.ControllerOffUrl
 }
@@ -52,6 +55,11 @@ if (
 
 $udp = [Net.Sockets.UdpClient]::new($listenPort)
 $remote = [Net.IPEndPoint]::new([Net.IPAddress]::Any, 0)
+
+Set-Content `
+    -LiteralPath $pidFile `
+    -Value $PID `
+    -Encoding ASCII
 
 Write-Host "Movie-mode agent listening on UDP port $listenPort"
 Write-Host "Press Ctrl+C to stop."
@@ -313,4 +321,17 @@ finally {
     Stop-Blackouts
     Restore-MonitorBrightness
     $udp.Dispose()
+
+    if (Test-Path -LiteralPath $pidFile) {
+        $savedPid = Get-Content `
+            -LiteralPath $pidFile `
+            -ErrorAction SilentlyContinue
+
+        if ([int]$savedPid -eq $PID) {
+            Remove-Item `
+                -LiteralPath $pidFile `
+                -Force `
+                -ErrorAction SilentlyContinue
+        }
+    }
 }

@@ -2,6 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $agentPath = Join-Path $PSScriptRoot "movie_mode_agent.ps1"
 $configPath = Join-Path $PSScriptRoot "movie_mode_agent_config.psd1"
+$pidFile = Join-Path `
+    ([IO.Path]::GetTempPath()) `
+    "desk_controller_movie_mode.pid"
 
 if (-not (Test-Path -LiteralPath $configPath)) {
     throw "Missing agent configuration: $configPath"
@@ -26,25 +29,35 @@ Set-ItemProperty `
     -Name "DeskControllerMovieMode" `
     -Value $runCommand
 
-$listener = Get-NetUDPEndpoint `
-    -LocalPort 8765 `
-    -ErrorAction SilentlyContinue
+if (Test-Path -LiteralPath $pidFile) {
+    $existingPid = [int](
+        Get-Content `
+            -LiteralPath $pidFile `
+            -ErrorAction SilentlyContinue
+    )
 
-if ($null -ne $listener) {
-    $listenerProcess = Get-Process `
-        -Id $listener.OwningProcess `
+    $existingProcess = Get-Process `
+        -Id $existingPid `
         -ErrorAction SilentlyContinue
 
-    if ($listenerProcess.Name -notin @("powershell", "pwsh")) {
-        throw "UDP port 8765 is owned by $($listenerProcess.Name), not the movie-mode helper."
+    if (
+        $null -ne $existingProcess -and
+        $existingProcess.Name -in @("powershell", "pwsh")
+    ) {
+        Stop-Process `
+            -Id $existingPid `
+            -Force
+
+        $existingProcess.WaitForExit(5000)
     }
 
-    Stop-Process `
-        -Id $listener.OwningProcess `
-        -Force
+    Remove-Item `
+        -LiteralPath $pidFile `
+        -Force `
+        -ErrorAction SilentlyContinue
 }
 
-Start-Process `
+$process = Start-Process `
     -FilePath "powershell.exe" `
     -ArgumentList @(
         "-NoProfile",
@@ -55,25 +68,13 @@ Start-Process `
         "-File",
         $agentPath
     ) `
-    -WindowStyle Hidden
+    -WindowStyle Hidden `
+    -PassThru
 
-$deadline = [DateTime]::UtcNow.AddSeconds(10)
+Start-Sleep -Seconds 2
 
-do {
-    Start-Sleep -Milliseconds 250
-
-    $listener = Get-NetUDPEndpoint `
-        -LocalPort 8765 `
-        -ErrorAction SilentlyContinue
-}
-while ($null -eq $listener -and [DateTime]::UtcNow -lt $deadline)
-
-$listener = Get-NetUDPEndpoint `
-    -LocalPort 8765 `
-    -ErrorAction SilentlyContinue
-
-if ($null -eq $listener) {
-    throw "Agent did not start listening on UDP port 8765."
+if ($process.HasExited) {
+    throw "Agent exited during startup with code $($process.ExitCode)."
 }
 
 Write-Host "Movie Mode agent installed in per-user startup and listening on UDP port 8765."
