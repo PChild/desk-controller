@@ -32,6 +32,8 @@ $remote = [Net.IPEndPoint]::new([Net.IPAddress]::Any, 0)
 Write-Host "Movie-mode agent listening on UDP port $listenPort"
 Write-Host "Press Ctrl+C to stop."
 
+$blackoutProcesses = @()
+
 function Get-BlackoutProcesses {
     return @(
         Get-CimInstance Win32_Process |
@@ -45,7 +47,7 @@ function Get-BlackoutProcesses {
     )
 }
 
-function Stop-Blackouts {
+function Remove-OrphanBlackouts {
     foreach ($process in Get-BlackoutProcesses) {
         Stop-Process `
             -Id $process.ProcessId `
@@ -53,6 +55,22 @@ function Stop-Blackouts {
             -ErrorAction SilentlyContinue
     }
 }
+
+function Stop-Blackouts {
+    foreach ($process in $script:blackoutProcesses) {
+        if (-not $process.HasExited) {
+            Stop-Process `
+                -Id $process.Id `
+                -Force `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
+    $script:blackoutProcesses = @()
+}
+
+# Clean up overlays left behind if a previous agent was interrupted.
+Remove-OrphanBlackouts
 
 try {
     while ($true) {
@@ -78,7 +96,7 @@ try {
                 Stop-Blackouts
 
                 foreach ($displayName in $blackoutDisplays) {
-                    Start-Process `
+                    $process = Start-Process `
                         -FilePath "powershell.exe" `
                         -ArgumentList @(
                             "-NoProfile",
@@ -91,7 +109,10 @@ try {
                             "-DisplayName",
                             $displayName
                         ) `
-                        -WindowStyle Hidden
+                        -WindowStyle Hidden `
+                        -PassThru
+
+                    $script:blackoutProcesses += $process
                 }
 
                 Write-Host "Movie mode on: blackouts shown"

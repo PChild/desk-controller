@@ -26,6 +26,9 @@ $form.ShowInTaskbar = $false
 $form.Cursor = [Windows.Forms.Cursors]::Hand
 
 $form.Add_Click({
+    # Give immediate visual feedback while the controller closes both overlays.
+    $form.Hide()
+
     try {
         $client = [Net.WebClient]::new()
         [void]$client.DownloadString(
