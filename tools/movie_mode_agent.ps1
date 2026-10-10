@@ -15,7 +15,7 @@ $configDirectory = Split-Path -Parent (
 $toolPath = [IO.Path]::GetFullPath(
     [IO.Path]::Combine(
         $configDirectory,
-        $config.MultiMonitorToolPath
+        $config.ControlMyMonitorPath
     )
 )
 $monitorIds = @($config.MonitorIds)
@@ -23,7 +23,7 @@ $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
 
 if (-not (Test-Path -LiteralPath $toolPath)) {
-    throw "MultiMonitorTool was not found: $toolPath"
+    throw "ControlMyMonitor was not found: $toolPath"
 }
 
 if ($monitorIds.Count -ne 2) {
@@ -40,15 +40,20 @@ $remote = [Net.IPEndPoint]::new([Net.IPAddress]::Any, 0)
 Write-Host "Movie-mode agent listening on UDP port $listenPort"
 Write-Host "Press Ctrl+C to stop."
 
-function Invoke-MonitorCommand {
+function Set-MonitorPower {
     param(
-        [string]$Command,
-        [string]$MonitorId
+        [string]$MonitorId,
+        [int]$PowerValue
     )
 
     $process = Start-Process `
         -FilePath $toolPath `
-        -ArgumentList @($Command, $MonitorId) `
+        -ArgumentList @(
+            "/SetValue",
+            $MonitorId,
+            "D6",
+            $PowerValue
+        ) `
         -WindowStyle Hidden `
         -Wait `
         -PassThru
@@ -78,44 +83,31 @@ try {
         switch ($action) {
             "off" {
                 foreach ($monitorId in $monitorIds) {
-                    if (-not (Invoke-MonitorCommand "/disable" $monitorId)) {
+                    if (-not (Set-MonitorPower $monitorId 5)) {
                         Write-Warning (
-                            "Could not disable monitor: " +
+                            "Could not put monitor in standby: " +
                             $monitorId
                         )
                     }
 
-                    # Display configuration changes are asynchronous. Let each
-                    # one settle before changing the next monitor.
-                    Start-Sleep -Seconds 3
+                    Start-Sleep -Milliseconds 250
                 }
 
-                Write-Host "Movie mode on: monitors disabled"
+                Write-Host "Movie mode on: monitors in standby"
             }
             "on" {
-                $displaySwitch = Join-Path (
-                    $env:SystemRoot
-                ) "System32\DisplaySwitch.exe"
+                foreach ($monitorId in $monitorIds) {
+                    if (-not (Set-MonitorPower $monitorId 1)) {
+                        Write-Warning (
+                            "Could not wake monitor: " +
+                            $monitorId
+                        )
+                    }
 
-                Start-Process `
-                    -FilePath $displaySwitch `
-                    -ArgumentList "/extend" `
-                    -WindowStyle Hidden `
-                    -Wait
-
-                # /extend rediscovers both detached displays. On this system,
-                # the center becomes active immediately while the left display
-                # needs one explicit enable after its ID reappears.
-                Start-Sleep -Seconds 10
-
-                if (-not (Invoke-MonitorCommand "/enable" $monitorIds[0])) {
-                    Write-Warning (
-                        "Could not enable monitor: " +
-                        $monitorIds[0]
-                    )
+                    Start-Sleep -Milliseconds 250
                 }
 
-                Write-Host "Movie mode off: monitors enabled"
+                Write-Host "Movie mode off: monitors awake"
             }
             default {
                 Write-Warning "Ignored unknown action: $action"

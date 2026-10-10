@@ -105,13 +105,12 @@ settings.
 ## Movie mode
 
 The **Movie Mode** web button toggles two configured Windows monitors between
-disabled and enabled. The ESP32 sends a token-protected UDP command to a
-Windows helper. The helper disables each selected monitor with a separate
-MultiMonitorTool command and waits for each display change to finish. On exit
-it uses Windows' built-in extended-display mode to rediscover detached
-DisplayPort monitors, then explicitly enables any panel that remains inactive.
+standby and awake. The ESP32 sends a token-protected UDP command to a Windows
+helper. The helper uses ControlMyMonitor to set each monitor's DDC/CI power
+value directly. Windows keeps both displays attached, so windows and icons do
+not move to the remaining display.
 
-1. Download [MultiMonitorTool](https://www.nirsoft.net/utils/multi_monitor_tool.html)
+1. Download [ControlMyMonitor](https://www.nirsoft.net/utils/control_my_monitor.html)
    on the Windows computer.
 2. Open it and note the serial number or monitor ID for each of the two monitors.
 3. Copy `tools/movie_mode_agent_config.psd1.example` to

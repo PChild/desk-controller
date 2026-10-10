@@ -1,6 +1,6 @@
 @{
-    # Download MultiMonitorTool and update this path.
-    MultiMonitorToolPath = "C:\Tools\MultiMonitorTool\MultiMonitorTool.exe"
+    # Download ControlMyMonitor and update this path.
+    ControlMyMonitorPath = "C:\Tools\ControlMyMonitor\ControlMyMonitor.exe"
 
     # Use monitor serial numbers or IDs shown by MultiMonitorTool.
     MonitorIds = @(
