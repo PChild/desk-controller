@@ -13,6 +13,17 @@ $blackoutDisplays = @($config.BlackoutDisplays)
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
 $blackoutScript = Join-Path $PSScriptRoot "movie_mode_blackout.ps1"
+$msigdPath = [string]$config.MsigdPath
+$brightnessMonitors = @($config.BrightnessMonitors)
+$movieBrightness = if ($null -ne $config.MovieBrightness) {
+    [int]$config.MovieBrightness
+}
+else {
+    0
+}
+$brightnessStateFile = Join-Path `
+    ([IO.Path]::GetTempPath()) `
+    "desk_controller_movie_brightness.json"
 $controllerOffUrl = if ($config.ControllerOffUrl) {
     [string]$config.ControllerOffUrl
 }
@@ -30,6 +41,13 @@ if ($blackoutDisplays.Count -ne 2) {
 
 if ([string]::IsNullOrWhiteSpace($token)) {
     throw "Configure a non-empty Token."
+}
+
+if (
+    -not [string]::IsNullOrWhiteSpace($msigdPath) -and
+    -not (Test-Path -LiteralPath $msigdPath)
+) {
+    throw "msigd was not found: $msigdPath"
 }
 
 $udp = [Net.Sockets.UdpClient]::new($listenPort)
@@ -73,6 +91,136 @@ function Stop-Blackouts {
     }
 
     $script:blackoutProcesses = @()
+}
+
+function Set-MovieBrightness {
+    if (
+        [string]::IsNullOrWhiteSpace($msigdPath) -or
+        $brightnessMonitors.Count -eq 0
+    ) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $brightnessStateFile)) {
+        $saved = [ordered]@{}
+
+        foreach ($monitor in $brightnessMonitors) {
+            try {
+                $output = & $msigdPath `
+                    --monitor $monitor `
+                    --numeric `
+                    --filter brightness `
+                    --query 2>&1
+
+                if ($LASTEXITCODE -ne 0) {
+                    throw "msigd query exited with code $LASTEXITCODE"
+                }
+
+                $match = [regex]::Match(
+                    ($output -join "`n"),
+                    '(?im)^\s*brightness\s*:\s*(\d+)'
+                )
+
+                if (-not $match.Success) {
+                    throw "brightness was not present in msigd output"
+                }
+
+                $saved[[string]$monitor] = [int]$match.Groups[1].Value
+            }
+            catch {
+                Write-Warning (
+                    "Could not read brightness for monitor ${monitor}: " +
+                    $_.Exception.Message
+                )
+            }
+        }
+
+        if ($saved.Count -gt 0) {
+            $saved |
+                ConvertTo-Json -Compress |
+                Set-Content -LiteralPath $brightnessStateFile -Encoding UTF8
+        }
+    }
+
+    foreach ($monitor in $brightnessMonitors) {
+        try {
+            $process = Start-Process `
+                -FilePath $msigdPath `
+                -ArgumentList @(
+                    "--monitor",
+                    $monitor,
+                    "--brightness",
+                    $movieBrightness
+                ) `
+                -NoNewWindow `
+                -Wait `
+                -PassThru
+
+            if ($process.ExitCode -ne 0) {
+                throw "msigd exited with code $($process.ExitCode)"
+            }
+        }
+        catch {
+            Write-Warning (
+                "Could not dim monitor ${monitor}: " +
+                $_.Exception.Message
+            )
+        }
+    }
+}
+
+function Restore-MonitorBrightness {
+    if (
+        [string]::IsNullOrWhiteSpace($msigdPath) -or
+        -not (Test-Path -LiteralPath $brightnessStateFile)
+    ) {
+        return
+    }
+
+    try {
+        $saved = Get-Content -LiteralPath $brightnessStateFile -Raw |
+            ConvertFrom-Json
+        $restored = $true
+
+        foreach ($property in $saved.PSObject.Properties) {
+            try {
+                $process = Start-Process `
+                    -FilePath $msigdPath `
+                    -ArgumentList @(
+                        "--monitor",
+                        [int]$property.Name,
+                        "--brightness",
+                        [int]$property.Value
+                    ) `
+                    -NoNewWindow `
+                    -Wait `
+                    -PassThru
+
+                if ($process.ExitCode -ne 0) {
+                    throw "msigd exited with code $($process.ExitCode)"
+                }
+            }
+            catch {
+                $restored = $false
+                Write-Warning (
+                    "Could not restore brightness for monitor " +
+                    $property.Name +
+                    ": " +
+                    $_.Exception.Message
+                )
+            }
+        }
+
+        if ($restored) {
+            Remove-Item -LiteralPath $brightnessStateFile -Force
+        }
+    }
+    catch {
+        Write-Warning (
+            "Could not restore saved monitor brightness: " +
+            $_.Exception.Message
+        )
+    }
 }
 
 # Clean up overlays left behind if a previous agent was interrupted.
@@ -127,10 +275,13 @@ try {
                     $script:blackoutProcesses += $process
                 }
 
+                Set-MovieBrightness
+
                 Write-Host "Movie mode on: blackouts shown"
             }
             "on" {
                 Stop-Blackouts
+                Restore-MonitorBrightness
 
                 Write-Host "Movie mode off: blackouts closed"
             }
@@ -142,5 +293,7 @@ try {
     }
 }
 finally {
+    Stop-Blackouts
+    Restore-MonitorBrightness
     $udp.Dispose()
 }

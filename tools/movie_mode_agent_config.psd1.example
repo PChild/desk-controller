@@ -8,6 +8,10 @@
 
     ListenPort = 8765
     ControllerOffUrl = "http://desk.local/api/movie/off"
+    MsigdPath = "C:\\Users\\your-name\\msigd\\msigd.exe"
+    # Include only displays blacked out for movie mode.
+    BrightnessMonitors = @(2, 3)
+    MovieBrightness = 0
 
     # Use the same private value for MOVIE_MODE_TOKEN in settings.toml.
     Token = "replace-with-a-long-random-value"

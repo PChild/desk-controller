@@ -114,6 +114,21 @@ and icons do not move to the remaining display. Exiting movie mode closes both
 blackouts immediately. Clicking either blacked-out display also exits movie
 mode, closes both overlays, and resets the ESP32 toggle state.
 
+Optionally, the helper can use `msigd` to save each MSI monitor's brightness,
+set it to the configured movie-mode level, and restore the exact saved values
+when movie mode exits. Add these values to the helper configuration:
+
+```powershell
+MsigdPath = "C:\Users\your-name\msigd\msigd.exe"
+# Include only the monitors blacked out during movie mode.
+BrightnessMonitors = @(2, 3)
+MovieBrightness = 0
+```
+
+Monitor numbers come from `msigd.exe --list`. A saved brightness state is not
+overwritten by repeated movie-on commands, and is retained if restoration
+fails so the helper can retry it on the next movie-off command.
+
 1. Copy `tools/movie_mode_agent_config.psd1.example` to
    `tools/movie_mode_agent_config.psd1` and set the two Windows display names,
    UDP port, and a private token.
