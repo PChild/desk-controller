@@ -18,6 +18,7 @@ $toolPath = [IO.Path]::GetFullPath(
         $config.MultiMonitorToolPath
     )
 )
+$savedLayoutPath = Join-Path $configDirectory "movie_mode_monitors.cfg"
 $monitorIds = @($config.MonitorIds)
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
@@ -61,12 +62,24 @@ try {
 
         switch ($action) {
             "off" {
-                & $toolPath /TurnOff @monitorIds
-                Write-Host "Movie mode on: monitors sent to standby"
+                & $toolPath /SaveConfig $savedLayoutPath
+
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warning "Could not save the monitor layout"
+                    continue
+                }
+
+                & $toolPath /disable @monitorIds
+                Write-Host "Movie mode on: monitors disabled"
             }
             "on" {
-                & $toolPath /TurnOn @monitorIds
-                Write-Host "Movie mode off: monitors turned on"
+                if (-not (Test-Path -LiteralPath $savedLayoutPath)) {
+                    Write-Warning "No saved monitor layout is available"
+                    continue
+                }
+
+                & $toolPath /LoadConfig $savedLayoutPath
+                Write-Host "Movie mode off: monitor layout restored"
             }
             default {
                 Write-Warning "Ignored unknown action: $action"
@@ -76,11 +89,7 @@ try {
 
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "MultiMonitorTool exited with code $LASTEXITCODE"
-            continue
         }
-
-        $response = [Text.Encoding]::UTF8.GetBytes($action)
-        [void]$udp.Send($response, $response.Length, $remote)
     }
 }
 finally {

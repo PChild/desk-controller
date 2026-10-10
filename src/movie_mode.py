@@ -59,8 +59,6 @@ class MovieMode:
                 pool.SOCK_DGRAM
             )
 
-            sock.settimeout(2)
-
             bytes_sent = sock.sendto(
                 payload,
                 (
@@ -74,24 +72,6 @@ class MovieMode:
 
                 raise OSError(
                     "Incomplete movie-mode command"
-                )
-
-
-            response = bytearray(16)
-
-            response_length, _ = (
-                sock.recvfrom_into(response)
-            )
-
-            acknowledged_action = bytes(
-                response[:response_length]
-            ).decode("utf-8")
-
-
-            if acknowledged_action != action:
-
-                raise OSError(
-                    "Invalid movie-mode acknowledgment"
                 )
 
 

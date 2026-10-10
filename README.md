@@ -105,10 +105,10 @@ settings.
 ## Movie mode
 
 The **Movie Mode** web button toggles two configured Windows monitors between
-standby and on. The ESP32 sends a small authenticated UDP command to a Windows
-helper, which uses MultiMonitorTool's DDC/CI `/TurnOff` and `/TurnOn` commands.
-The monitors remain part of the Windows desktop, so window positions are not
-rearranged.
+disabled and enabled. The ESP32 sends a token-protected UDP command to a
+Windows helper. The helper saves the complete display layout before disabling
+the selected monitors and reloads it when leaving movie mode, restoring monitor
+positions and the primary display.
 
 1. Download [MultiMonitorTool](https://www.nirsoft.net/utils/multi_monitor_tool.html)
    on the Windows computer.
@@ -140,8 +140,7 @@ http://desk.local/api/movie/off  # leave movie mode; monitors turn on
 
 The regular `/api/movie` endpoint toggles the current controller state. The
 controller's state resets to off after an ESP32 reboot, so use the explicit
-`/api/movie/off` endpoint whenever the displayed state is uncertain. The web
-button changes state only after the Windows helper acknowledges the command.
+`/api/movie/off` endpoint whenever the displayed state is uncertain.
 
 ## Deploying code
 

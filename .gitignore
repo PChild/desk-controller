@@ -40,3 +40,4 @@ src/settings.toml
 tools/movie_mode_agent_config.psd1
 tools/MultiMonitorTool.exe
 tools/MultiMonitorTool.cfg
+tools/movie_mode_monitors.cfg
