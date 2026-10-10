@@ -6,7 +6,10 @@ param(
     [int]$AgentPort,
 
     [Parameter(Mandatory = $true)]
-    [string]$Token
+    [string]$Token,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ControllerOffUrl
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,6 +50,18 @@ $form.Add_Click({
             "127.0.0.1",
             $AgentPort
         )
+
+        # Close the other overlay over localhost first, then synchronize the
+        # ESP32 state without making either overlay wait on the network.
+        Start-Process `
+            -FilePath "curl.exe" `
+            -ArgumentList @(
+                "--silent",
+                "--max-time",
+                "3",
+                $ControllerOffUrl
+            ) `
+            -WindowStyle Hidden
     }
     finally {
         if ($null -ne $client) {

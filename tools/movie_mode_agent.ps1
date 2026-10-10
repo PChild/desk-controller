@@ -13,6 +13,12 @@ $blackoutDisplays = @($config.BlackoutDisplays)
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
 $blackoutScript = Join-Path $PSScriptRoot "movie_mode_blackout.ps1"
+$controllerOffUrl = if ($config.ControllerOffUrl) {
+    [string]$config.ControllerOffUrl
+}
+else {
+    "http://desk.local/api/movie/off"
+}
 
 if (-not (Test-Path -LiteralPath $blackoutScript)) {
     throw "Missing blackout script: $blackoutScript"
@@ -111,7 +117,9 @@ try {
                             "-AgentPort",
                             $listenPort,
                             "-Token",
-                            $token
+                            $token,
+                            "-ControllerOffUrl",
+                            $controllerOffUrl
                         ) `
                         -WindowStyle Hidden `
                         -PassThru
