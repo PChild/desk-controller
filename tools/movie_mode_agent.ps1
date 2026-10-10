@@ -18,14 +18,7 @@ $toolPath = [IO.Path]::GetFullPath(
         $config.MultiMonitorToolPath
     )
 )
-$savedLayoutPath = Join-Path $configDirectory "movie_mode_monitors.cfg"
 $monitorIds = @($config.MonitorIds)
-$restoreMonitorIds = @($config.RestoreMonitorIds)
-
-if ($restoreMonitorIds.Count -eq 0) {
-    $restoreMonitorIds = $monitorIds
-}
-
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
 
@@ -46,6 +39,22 @@ $remote = [Net.IPEndPoint]::new([Net.IPAddress]::Any, 0)
 
 Write-Host "Movie-mode agent listening on UDP port $listenPort"
 Write-Host "Press Ctrl+C to stop."
+
+function Invoke-MonitorCommand {
+    param(
+        [string]$Command,
+        [string]$MonitorId
+    )
+
+    $process = Start-Process `
+        -FilePath $toolPath `
+        -ArgumentList @($Command, $MonitorId) `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+
+    return $process.ExitCode -eq 0
+}
 
 try {
     while ($true) {
@@ -68,58 +77,50 @@ try {
 
         switch ($action) {
             "off" {
-                & $toolPath /SaveConfig $savedLayoutPath
-
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Warning "Could not save the monitor layout"
-                    continue
-                }
-
                 foreach ($monitorId in $monitorIds) {
-                    & $toolPath /disable $monitorId
-
-                    if ($LASTEXITCODE -ne 0) {
+                    if (-not (Invoke-MonitorCommand "/disable" $monitorId)) {
                         Write-Warning (
                             "Could not disable monitor: " +
                             $monitorId
                         )
                     }
+
+                    # Display configuration changes are asynchronous. Let each
+                    # one settle before changing the next monitor.
+                    Start-Sleep -Seconds 3
                 }
 
                 Write-Host "Movie mode on: monitors disabled"
             }
             "on" {
-                if (-not (Test-Path -LiteralPath $savedLayoutPath)) {
-                    Write-Warning "No saved monitor layout is available"
-                    continue
+                $displaySwitch = Join-Path (
+                    $env:SystemRoot
+                ) "System32\DisplaySwitch.exe"
+
+                Start-Process `
+                    -FilePath $displaySwitch `
+                    -ArgumentList "/extend" `
+                    -WindowStyle Hidden `
+                    -Wait
+
+                # /extend rediscovers both detached displays. On this system,
+                # the center becomes active immediately while the left display
+                # needs one explicit enable after its ID reappears.
+                Start-Sleep -Seconds 10
+
+                if (-not (Invoke-MonitorCommand "/enable" $monitorIds[0])) {
+                    Write-Warning (
+                        "Could not enable monitor: " +
+                        $monitorIds[0]
+                    )
                 }
 
-                & $toolPath /LoadConfig $savedLayoutPath
-
-                # MultiMonitorTool returns before Windows has finished applying
-                # the layout. Wait before explicitly enabling and waking every
-                # display so DisplayPort monitors recover reliably.
-                Start-Sleep -Seconds 3
-
-                foreach ($monitorId in $restoreMonitorIds) {
-                    & $toolPath /enable $monitorId
-                    Start-Sleep -Milliseconds 750
-                }
-
-                foreach ($monitorId in $restoreMonitorIds) {
-                    & $toolPath /TurnOn $monitorId
-                }
-
-                Write-Host "Movie mode off: monitor layout restored"
+                Write-Host "Movie mode off: monitors enabled"
             }
             default {
                 Write-Warning "Ignored unknown action: $action"
                 continue
             }
-        }
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "MultiMonitorTool exited with code $LASTEXITCODE"
         }
     }
 }

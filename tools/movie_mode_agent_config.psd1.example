@@ -8,13 +8,6 @@
         "SECOND_MONITOR_SERIAL_OR_ID"
     )
 
-    # Include every monitor that should be restored when movie mode exits.
-    RestoreMonitorIds = @(
-        "FIRST_MONITOR_SERIAL_OR_ID"
-        "SECOND_MONITOR_SERIAL_OR_ID"
-        "ALWAYS_ON_MONITOR_SERIAL_OR_ID"
-    )
-
     ListenPort = 8765
 
     # Use the same private value for MOVIE_MODE_TOKEN in settings.toml.
