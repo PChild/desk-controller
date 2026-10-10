@@ -69,7 +69,17 @@ try {
                     continue
                 }
 
-                & $toolPath /disable @monitorIds
+                foreach ($monitorId in $monitorIds) {
+                    & $toolPath /disable $monitorId
+
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Warning (
+                            "Could not disable monitor: " +
+                            $monitorId
+                        )
+                    }
+                }
+
                 Write-Host "Movie mode on: monitors disabled"
             }
             "on" {
