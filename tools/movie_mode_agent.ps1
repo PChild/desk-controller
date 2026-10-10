@@ -9,7 +9,15 @@ if (-not (Test-Path -LiteralPath $ConfigPath)) {
 }
 
 $config = Import-PowerShellDataFile -LiteralPath $ConfigPath
-$toolPath = [IO.Path]::GetFullPath($config.MultiMonitorToolPath)
+$configDirectory = Split-Path -Parent (
+    [IO.Path]::GetFullPath($ConfigPath)
+)
+$toolPath = [IO.Path]::GetFullPath(
+    [IO.Path]::Combine(
+        $configDirectory,
+        $config.MultiMonitorToolPath
+    )
+)
 $monitorIds = @($config.MonitorIds)
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
