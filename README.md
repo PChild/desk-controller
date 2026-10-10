@@ -115,7 +115,7 @@ positions and the primary display.
 2. Open it and note the serial number or monitor ID for each of the two monitors.
 3. Copy `tools/movie_mode_agent_config.psd1.example` to
    `tools/movie_mode_agent_config.psd1` and set the tool path, two monitor IDs,
-   UDP port, and a private token.
+   all monitor IDs under `RestoreMonitorIds`, UDP port, and a private token.
 4. Add the matching computer address, port, and token to `src/settings.toml`:
 
 ```toml

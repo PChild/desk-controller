@@ -20,6 +20,12 @@ $toolPath = [IO.Path]::GetFullPath(
 )
 $savedLayoutPath = Join-Path $configDirectory "movie_mode_monitors.cfg"
 $monitorIds = @($config.MonitorIds)
+$restoreMonitorIds = @($config.RestoreMonitorIds)
+
+if ($restoreMonitorIds.Count -eq 0) {
+    $restoreMonitorIds = $monitorIds
+}
+
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
 
@@ -89,6 +95,21 @@ try {
                 }
 
                 & $toolPath /LoadConfig $savedLayoutPath
+
+                # MultiMonitorTool returns before Windows has finished applying
+                # the layout. Wait before explicitly enabling and waking every
+                # display so DisplayPort monitors recover reliably.
+                Start-Sleep -Seconds 3
+
+                foreach ($monitorId in $restoreMonitorIds) {
+                    & $toolPath /enable $monitorId
+                    Start-Sleep -Milliseconds 750
+                }
+
+                foreach ($monitorId in $restoreMonitorIds) {
+                    & $toolPath /TurnOn $monitorId
+                }
+
                 Write-Host "Movie mode off: monitor layout restored"
             }
             default {
