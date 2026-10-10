@@ -30,6 +30,8 @@ class DeskApplication:
 
         self.started = time.monotonic()
 
+        self.reset_at = None
+
         self.last_successful_loop = (
             self.started
         )
@@ -252,6 +254,13 @@ class DeskApplication:
 
 
 
+    def request_reset(self):
+
+        # Give the HTTP response time to leave the socket before resetting.
+        self.reset_at = time.monotonic() + 0.75
+
+
+
     def run(self):
 
         while True:
@@ -265,6 +274,15 @@ class DeskApplication:
 
 
                 self.network.poll()
+
+
+                if (
+                    self.reset_at is not None
+                    and
+                    time.monotonic() >= self.reset_at
+                ):
+
+                    microcontroller.reset()
 
 
                 self.led.poll()

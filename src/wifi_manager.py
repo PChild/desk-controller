@@ -271,6 +271,47 @@ class WifiManager:
             )
 
 
+        @self.server.route(
+            "/api/reboot"
+        )
+        def reboot(request):
+
+            expected = os.getenv(
+                "CIRCUITPY_WEB_API_PASSWORD"
+            )
+
+            supplied = request.headers.get(
+                "X-Deploy-Token"
+            )
+
+            if (
+                not expected
+                or
+                supplied != expected
+            ):
+
+                return JSONResponse(
+                    request,
+                    {
+                        "success": False,
+                        "message": "Invalid deploy token"
+                    },
+                    status=(401, "Unauthorized")
+                )
+
+
+            self.app.request_reset()
+
+
+            return JSONResponse(
+                request,
+                {
+                    "success": True,
+                    "message": "Reboot scheduled"
+                }
+            )
+
+
     def command(
         self,
         request,

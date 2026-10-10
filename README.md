@@ -32,6 +32,7 @@ The ESP32 emulates handset button presses by pulling the control lines LOW. The 
 desk-controller/
 ├── src/
 │   ├── code.py            # CircuitPython entry point
+│   ├── boot.py            # OTA filesystem and USB recovery setup
 │   ├── app.py             # Application/main loop
 │   ├── desk.py            # Desk hardware interface
 │   ├── button.py          # AtomS3 Lite button
@@ -43,7 +44,8 @@ desk-controller/
 │   └── lib/               # CircuitPython libraries
 │
 ├── tools/
-│   └── deploy.py          # Deploy to CIRCUITPY
+│   ├── deploy.py          # Deploy over USB
+│   └── deploy_wifi.py     # Deploy over Wi-Fi
 ├── settings.toml.example
 ├── requirements.txt
 └── README.md
@@ -68,6 +70,7 @@ GET /api/wake
 GET /api/movie
 GET /api/movie/on
 GET /api/movie/off
+GET /api/reboot            # requires X-Deploy-Token
 ```
 
 ## Reliability
@@ -188,3 +191,47 @@ ESP32 reloads
 Edit files under `src/` and run the deployment script to synchronize files to the AtomS3 Lite.
 
 Keep Wi-Fi credentials in `settings.toml`. Do not commit the real `settings.toml` to Git.
+
+## Updating over Wi-Fi
+
+The controller uses CircuitPython Web Workflow on port 8080 for authenticated
+file uploads. Add these settings to `src/settings.toml`:
+
+```toml
+CIRCUITPY_WIFI_HOSTNAME="desk"
+CIRCUITPY_WEB_API_PASSWORD="use-a-unique-random-password"
+CIRCUITPY_WEB_API_PORT=8080
+CIRCUITPY_WEB_INSTANCE_NAME="Desk Controller"
+```
+
+Web Workflow uses unencrypted HTTP on the local network. Use a unique password,
+do not reuse an important password, and do not expose these ports to the
+internet.
+
+Enabling OTA requires one final USB deployment and a power cycle:
+
+```text
+python tools/deploy.py
+```
+
+After the ESP32 restarts, its USB `CIRCUITPY` drive normally stays hidden so the
+Web Workflow can write to the filesystem. Future code and settings updates can
+then be deployed with:
+
+```text
+python tools/deploy_wifi.py --dry-run
+python tools/deploy_wifi.py
+```
+
+The Wi-Fi deploy uploads all files from `src/`, writes `code.py` last, and asks
+the controller for a hard reset so changes to `settings.toml` take effect. Use
+`--host 192.168.1.123` if mDNS is unavailable. If you are changing the Web
+Workflow password, pass the password currently on the device with
+`--password CURRENT_PASSWORD` for that deployment.
+
+For USB recovery, hold the AtomS3 Lite center button while powering it on or
+resetting it. The `CIRCUITPY` drive will remain available for that boot. Release
+the button and power-cycle again to return to Wi-Fi updates.
+
+CircuitPython's browser editor is also available at `http://desk.local:8080/`;
+use a blank username and the Web Workflow password.
