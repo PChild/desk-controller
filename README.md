@@ -104,17 +104,14 @@ settings.
 
 ## Movie mode
 
-The **Movie Mode** web button toggles two configured Windows monitors between
-standby and awake. The ESP32 sends a token-protected UDP command to a Windows
-helper. The helper uses ControlMyMonitor to set each monitor's DDC/CI power
-value directly. Windows keeps both displays attached, so windows and icons do
-not move to the remaining display.
+The **Movie Mode** web button covers two configured Windows displays with
+borderless, always-on-top black windows. The ESP32 sends a token-protected UDP
+command to a Windows helper. Windows keeps both displays attached, so windows
+and icons do not move to the remaining display. Exiting movie mode closes both
+blackouts immediately.
 
-1. Download [ControlMyMonitor](https://www.nirsoft.net/utils/control_my_monitor.html)
-   on the Windows computer.
-2. Open it and note the serial number or monitor ID for each of the two monitors.
-3. Copy `tools/movie_mode_agent_config.psd1.example` to
-   `tools/movie_mode_agent_config.psd1` and set the tool path, two monitor IDs,
+1. Copy `tools/movie_mode_agent_config.psd1.example` to
+   `tools/movie_mode_agent_config.psd1` and set the two Windows display names,
    UDP port, and a private token.
 4. Add the matching computer address, port, and token to `src/settings.toml`:
 

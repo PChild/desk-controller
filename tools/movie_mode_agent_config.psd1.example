@@ -1,11 +1,9 @@
 @{
-    # Download ControlMyMonitor and update this path.
-    ControlMyMonitorPath = "C:\Tools\ControlMyMonitor\ControlMyMonitor.exe"
-
-    # Use monitor serial numbers or IDs shown by MultiMonitorTool.
-    MonitorIds = @(
-        "FIRST_MONITOR_SERIAL_OR_ID"
-        "SECOND_MONITOR_SERIAL_OR_ID"
+    # Windows display names to cover. Find these in Windows display settings
+    # or with [Windows.Forms.Screen]::AllScreens after loading WinForms.
+    BlackoutDisplays = @(
+        "\\.\DISPLAY1"
+        "\\.\DISPLAY2"
     )
 
     ListenPort = 8765

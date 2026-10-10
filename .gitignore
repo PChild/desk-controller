@@ -38,7 +38,3 @@ desktop.ini
 # Local secrets
 src/settings.toml
 tools/movie_mode_agent_config.psd1
-tools/MultiMonitorTool.exe
-tools/MultiMonitorTool.cfg
-tools/ControlMyMonitor.exe
-tools/ControlMyMonitor.cfg

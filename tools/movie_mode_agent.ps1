@@ -9,25 +9,17 @@ if (-not (Test-Path -LiteralPath $ConfigPath)) {
 }
 
 $config = Import-PowerShellDataFile -LiteralPath $ConfigPath
-$configDirectory = Split-Path -Parent (
-    [IO.Path]::GetFullPath($ConfigPath)
-)
-$toolPath = [IO.Path]::GetFullPath(
-    [IO.Path]::Combine(
-        $configDirectory,
-        $config.ControlMyMonitorPath
-    )
-)
-$monitorIds = @($config.MonitorIds)
+$blackoutDisplays = @($config.BlackoutDisplays)
 $listenPort = [int]$config.ListenPort
 $token = [string]$config.Token
+$blackoutScript = Join-Path $PSScriptRoot "movie_mode_blackout.ps1"
 
-if (-not (Test-Path -LiteralPath $toolPath)) {
-    throw "ControlMyMonitor was not found: $toolPath"
+if (-not (Test-Path -LiteralPath $blackoutScript)) {
+    throw "Missing blackout script: $blackoutScript"
 }
 
-if ($monitorIds.Count -ne 2) {
-    throw "Configure exactly two MonitorIds."
+if ($blackoutDisplays.Count -ne 2) {
+    throw "Configure exactly two BlackoutDisplays."
 }
 
 if ([string]::IsNullOrWhiteSpace($token)) {
@@ -40,25 +32,26 @@ $remote = [Net.IPEndPoint]::new([Net.IPAddress]::Any, 0)
 Write-Host "Movie-mode agent listening on UDP port $listenPort"
 Write-Host "Press Ctrl+C to stop."
 
-function Set-MonitorPower {
-    param(
-        [string]$MonitorId,
-        [int]$PowerValue
+function Get-BlackoutProcesses {
+    return @(
+        Get-CimInstance Win32_Process |
+            Where-Object {
+                $_.Name -in @("powershell.exe", "pwsh.exe") -and
+                $_.CommandLine -match (
+                    '(?i)-File\s+"?[^\"]*' +
+                    'movie_mode_blackout\.ps1'
+                )
+            }
     )
+}
 
-    $process = Start-Process `
-        -FilePath $toolPath `
-        -ArgumentList @(
-            "/SetValue",
-            $MonitorId,
-            "D6",
-            $PowerValue
-        ) `
-        -WindowStyle Hidden `
-        -Wait `
-        -PassThru
-
-    return $process.ExitCode -eq 0
+function Stop-Blackouts {
+    foreach ($process in Get-BlackoutProcesses) {
+        Stop-Process `
+            -Id $process.ProcessId `
+            -Force `
+            -ErrorAction SilentlyContinue
+    }
 }
 
 try {
@@ -82,32 +75,31 @@ try {
 
         switch ($action) {
             "off" {
-                foreach ($monitorId in $monitorIds) {
-                    if (-not (Set-MonitorPower $monitorId 5)) {
-                        Write-Warning (
-                            "Could not put monitor in standby: " +
-                            $monitorId
-                        )
-                    }
+                Stop-Blackouts
 
-                    Start-Sleep -Milliseconds 250
+                foreach ($displayName in $blackoutDisplays) {
+                    Start-Process `
+                        -FilePath "powershell.exe" `
+                        -ArgumentList @(
+                            "-NoProfile",
+                            "-ExecutionPolicy",
+                            "Bypass",
+                            "-WindowStyle",
+                            "Hidden",
+                            "-File",
+                            $blackoutScript,
+                            "-DisplayName",
+                            $displayName
+                        ) `
+                        -WindowStyle Hidden
                 }
 
-                Write-Host "Movie mode on: monitors in standby"
+                Write-Host "Movie mode on: blackouts shown"
             }
             "on" {
-                foreach ($monitorId in $monitorIds) {
-                    if (-not (Set-MonitorPower $monitorId 1)) {
-                        Write-Warning (
-                            "Could not wake monitor: " +
-                            $monitorId
-                        )
-                    }
+                Stop-Blackouts
 
-                    Start-Sleep -Milliseconds 250
-                }
-
-                Write-Host "Movie mode off: monitors awake"
+                Write-Host "Movie mode off: blackouts closed"
             }
             default {
                 Write-Warning "Ignored unknown action: $action"
