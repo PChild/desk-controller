@@ -1,15 +1,5 @@
 $ErrorActionPreference = "Stop"
 
-$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$principal = [Security.Principal.WindowsPrincipal]::new($identity)
-$isAdministrator = $principal.IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator
-)
-
-if (-not $isAdministrator) {
-    throw "Run this script from PowerShell opened with Run as administrator."
-}
-
 $agentPath = Join-Path $PSScriptRoot "movie_mode_agent.ps1"
 $configPath = Join-Path $PSScriptRoot "movie_mode_agent_config.psd1"
 
@@ -17,6 +7,7 @@ if (-not (Test-Path -LiteralPath $configPath)) {
     throw "Missing agent configuration: $configPath"
 }
 
+# Start the helper invisibly at each login in this user's interactive desktop.
 $runCommand = (
     'powershell.exe -NoProfile -ExecutionPolicy Bypass ' +
     '-WindowStyle Hidden -File "' +
@@ -35,40 +26,47 @@ Set-ItemProperty `
     -Name "DeskControllerMovieMode" `
     -Value $runCommand
 
-$firewallRule = Get-NetFirewallRule `
-    -DisplayName "Desk Controller Movie Mode" `
-    -ErrorAction SilentlyContinue
-
-if ($null -eq $firewallRule) {
-    New-NetFirewallRule `
-        -DisplayName "Desk Controller Movie Mode" `
-        -Direction Inbound `
-        -Action Allow `
-        -Protocol UDP `
-        -LocalPort 8765 `
-        -Profile Private | Out-Null
-}
-
 $listener = Get-NetUDPEndpoint `
     -LocalPort 8765 `
     -ErrorAction SilentlyContinue
 
-if ($null -eq $listener) {
-    Start-Process `
-        -FilePath "powershell.exe" `
-        -ArgumentList @(
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-File",
-            $agentPath
-        ) `
-        -WindowStyle Hidden
+if ($null -ne $listener) {
+    $listenerProcess = Get-Process `
+        -Id $listener.OwningProcess `
+        -ErrorAction SilentlyContinue
 
-    Start-Sleep -Seconds 2
+    if ($listenerProcess.Name -notin @("powershell", "pwsh")) {
+        throw "UDP port 8765 is owned by $($listenerProcess.Name), not the movie-mode helper."
+    }
+
+    Stop-Process `
+        -Id $listener.OwningProcess `
+        -Force
 }
+
+Start-Process `
+    -FilePath "powershell.exe" `
+    -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-WindowStyle",
+        "Hidden",
+        "-File",
+        $agentPath
+    ) `
+    -WindowStyle Hidden
+
+$deadline = [DateTime]::UtcNow.AddSeconds(10)
+
+do {
+    Start-Sleep -Milliseconds 250
+
+    $listener = Get-NetUDPEndpoint `
+        -LocalPort 8765 `
+        -ErrorAction SilentlyContinue
+}
+while ($null -eq $listener -and [DateTime]::UtcNow -lt $deadline)
 
 $listener = Get-NetUDPEndpoint `
     -LocalPort 8765 `
@@ -78,4 +76,4 @@ if ($null -eq $listener) {
     throw "Agent did not start listening on UDP port 8765."
 }
 
-Write-Host "Movie Mode agent installed and listening on UDP port 8765."
+Write-Host "Movie Mode agent installed in per-user startup and listening on UDP port 8765."

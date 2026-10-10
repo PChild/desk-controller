@@ -140,12 +140,13 @@ MOVIE_MODE_PORT=8765
 MOVIE_MODE_TOKEN="use-the-same-private-token-here"
 ```
 
-5. Allow inbound UDP port 8765 through Windows Firewall on the private network,
-   then start the helper while signed in:
+5. Double-click `tools\install_movie_mode_agent.bat`. It immediately starts the
+   helper invisibly in the signed-in desktop session and adds it to that user's
+   Windows startup. No terminal needs to remain open and no administrator
+   prompt is required. It starts automatically at each future login.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\movie_mode_agent.ps1
-```
+Run the installer again after changing the helper scripts or configuration; it
+replaces and restarts the existing background process.
 
 For reliable recovery, a Stream Deck button can call either explicit endpoint:
 
