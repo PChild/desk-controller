@@ -52,16 +52,15 @@ $form.Add_Click({
         )
 
         # Close the other overlay over localhost first, then synchronize the
-        # ESP32 state without making either overlay wait on the network.
-        Start-Process `
-            -FilePath "curl.exe" `
-            -ArgumentList @(
-                "--silent",
-                "--max-time",
-                "3",
-                $ControllerOffUrl
-            ) `
-            -WindowStyle Hidden
+        # ESP32 state directly. The clicked form is already hidden, so a slow
+        # network response cannot delay the visible exit from movie mode.
+        $request = [Net.HttpWebRequest]::Create($ControllerOffUrl)
+        $request.Method = "GET"
+        $request.Timeout = 3000
+        $request.ReadWriteTimeout = 3000
+
+        $response = $request.GetResponse()
+        $response.Dispose()
     }
     finally {
         if ($null -ne $client) {
