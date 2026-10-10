@@ -107,7 +107,11 @@ try {
                             "-File",
                             $blackoutScript,
                             "-DisplayName",
-                            $displayName
+                            $displayName,
+                            "-AgentPort",
+                            $listenPort,
+                            "-Token",
+                            $token
                         ) `
                         -WindowStyle Hidden `
                         -PassThru

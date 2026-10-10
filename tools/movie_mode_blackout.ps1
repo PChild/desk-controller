@@ -1,6 +1,12 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$DisplayName
+    [string]$DisplayName,
+
+    [Parameter(Mandatory = $true)]
+    [int]$AgentPort,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Token
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,9 +36,16 @@ $form.Add_Click({
     $form.Hide()
 
     try {
-        $client = [Net.WebClient]::new()
-        [void]$client.DownloadString(
-            "http://desk.local/api/movie/off"
+        $client = [Net.Sockets.UdpClient]::new()
+        $payload = [Text.Encoding]::UTF8.GetBytes(
+            $Token + ":on"
+        )
+
+        [void]$client.Send(
+            $payload,
+            $payload.Length,
+            "127.0.0.1",
+            $AgentPort
         )
     }
     finally {
